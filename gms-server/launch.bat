@@ -1,6 +1,7 @@
 @echo off
 @title BeiDou
 chcp 65001
+cd /d "%~dp0"
 
-.\jdk-21.0.2\bin\java.exe  -Dspring.config.location=application.yml -jar BeiDou.jar
+.\jdk-21.0.10+7-jre\bin\java.exe -jar BeiDou.jar
 pause
