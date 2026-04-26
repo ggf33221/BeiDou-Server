@@ -397,13 +397,17 @@ public final class MTSHandler extends AbstractPacketHandler {
                 break;
             case 16: { //buy
                 int id = p.readInt(); // id of the item
+                log.info("MTS Buy attempt - buyer={}, mtsItemId={}", c.getPlayer().getId(), id);
                 try (Connection con = DatabaseConnection.getConnection();
                         PreparedStatement ps = con.prepareStatement("SELECT * FROM mts_items WHERE id = ? ORDER BY id DESC")) {
                     ps.setInt(1, id);
                     ResultSet rs = ps.executeQuery();
                     if (rs.next()) {
                         int price = rs.getInt("price") + 100 + (int) (rs.getInt("price") * 0.1); // taxes
-                        if (c.getPlayer().getCashShop().getCash(CashShop.NX_PREPAID) >= price) { // FIX
+                        int balance = c.getPlayer().getCashShop().getCash(CashShop.NX_PREPAID);
+                        log.info("MTS Buy - mtsItemId={}, price={}, tax_price={}, balance={}, enough={}",
+                                id, rs.getInt("price"), price, balance, balance >= price);
+                        if (balance >= price) { // FIX
                             boolean alwaysnull = true;
                             for (Channel cserv : Server.getInstance().getAllChannels()) {
                                 Character victim = cserv.getPlayerStorage().getCharacterById(rs.getInt("seller"));
@@ -442,25 +446,34 @@ public final class MTSHandler extends AbstractPacketHandler {
                             c.sendPacket(PacketCreator.transferInventory(getTransfer(c.getPlayer().getId())));
                             c.sendPacket(PacketCreator.notYetSoldInv(getNotYetSold(c.getPlayer().getId())));
                             c.sendPacket(PacketCreator.enableActions());
+                            log.info("MTS Buy success - buyer={}, mtsItemId={}", c.getPlayer().getId(), id);
                         } else {
+                            log.warn("MTS Buy failed - insufficient balance. buyer={}, mtsItemId={}, required={}, balance={}",
+                                    c.getPlayer().getId(), id, price, balance);
                             c.sendPacket(PacketCreator.MTSFailBuy());
                         }
+                    } else {
+                        log.warn("MTS Buy failed - item not found. buyer={}, mtsItemId={}", c.getPlayer().getId(), id);
                     }
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    log.error("MTS Buy SQL error - buyer={}, mtsItemId={}", c.getPlayer().getId(), id, e);
                     c.sendPacket(PacketCreator.MTSFailBuy());
                 }
                 break;
             }
             case 17: { //buy from cart
                 int id = p.readInt(); // id of the item
+                log.info("MTS Cart Buy attempt - buyer={}, mtsItemId={}", c.getPlayer().getId(), id);
                 try (Connection con = DatabaseConnection.getConnection();
                         PreparedStatement ps = con.prepareStatement("SELECT * FROM mts_items WHERE id = ? ORDER BY id DESC")) {
                     ps.setInt(1, id);
                     ResultSet rs = ps.executeQuery();
                     if (rs.next()) {
                         int price = rs.getInt("price") + 100 + (int) (rs.getInt("price") * 0.1);
-                        if (c.getPlayer().getCashShop().getCash(CashShop.NX_PREPAID) >= price) {
+                        int balance = c.getPlayer().getCashShop().getCash(CashShop.NX_PREPAID);
+                        log.info("MTS Cart Buy - mtsItemId={}, price={}, tax_price={}, balance={}, enough={}",
+                                id, rs.getInt("price"), price, balance, balance >= price);
+                        if (balance >= price) {
                             for (Channel cserv : Server.getInstance().getAllChannels()) {
                                 Character victim = cserv.getPlayerStorage().getCharacterById(rs.getInt("seller"));
                                 if (victim != null) {
@@ -495,12 +508,17 @@ public final class MTSHandler extends AbstractPacketHandler {
                             c.sendPacket(PacketCreator.showMTSCash(c.getPlayer()));
                             c.sendPacket(PacketCreator.transferInventory(getTransfer(c.getPlayer().getId())));
                             c.sendPacket(PacketCreator.notYetSoldInv(getNotYetSold(c.getPlayer().getId())));
+                            log.info("MTS Cart Buy success - buyer={}, mtsItemId={}", c.getPlayer().getId(), id);
                         } else {
+                            log.warn("MTS Cart Buy failed - insufficient balance. buyer={}, mtsItemId={}, required={}, balance={}",
+                                    c.getPlayer().getId(), id, price, balance);
                             c.sendPacket(PacketCreator.MTSFailBuy());
                         }
+                    } else {
+                        log.warn("MTS Cart Buy failed - item not found. buyer={}, mtsItemId={}", c.getPlayer().getId(), id);
                     }
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    log.error("MTS Cart Buy SQL error - buyer={}, mtsItemId={}", c.getPlayer().getId(), id, e);
                     c.sendPacket(PacketCreator.MTSFailBuy());
                 }
                 break;
@@ -601,12 +619,12 @@ public final class MTSHandler extends AbstractPacketHandler {
                                 equip.setWdef((short) rse.getInt("wdef"));
                                 equip.setUpgradeSlots((byte) rse.getInt("upgradeslots"));
                                 equip.setLevel((byte) rse.getInt("level"));
-                                equip.setItemLevel(rs.getByte("itemlevel"));
-                                equip.setItemExp(rs.getInt("itemexp"));
-                                equip.setRingId(rs.getInt("ringid"));
-                                equip.setFlag((short) rs.getInt("flag"));
-                                equip.setExpiration(rs.getLong("expiration"));
-                                equip.setGiftFrom(rs.getString("giftFrom"));
+                                equip.setItemLevel(rse.getByte("itemlevel"));
+                                equip.setItemExp(rse.getInt("itemexp"));
+                                equip.setRingId(rse.getInt("ringid"));
+                                equip.setFlag((short) rse.getInt("flag"));
+                                equip.setExpiration(rse.getLong("expiration"));
+                                equip.setGiftFrom(rse.getString("giftFrom"));
                                 items.add(new MTSItemInfo(equip, rse.getInt("price"), rse.getInt("id"),
                                         rse.getInt("seller"), rse.getString("sellername"), rse.getString("sell_ends")));
                             }

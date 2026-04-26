@@ -9932,7 +9932,7 @@ public class Character extends AbstractCharacterObject {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        chr.getCashShop().open(true);
+        chr.getCashShop().open(true);// xD
         c.enableCSActions();
         c.sendPacket(PacketCreator.MTSWantedListingOver(0, 0));
         c.sendPacket(PacketCreator.showMTSCash(c.getPlayer()));
